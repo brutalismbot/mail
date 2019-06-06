@@ -1,0 +1,11 @@
+language: ruby
+rvm:
+- 2.5.5
+script:
+- make
+deploy:
+- provider: script
+  script: make apply
+  on:
+    repo: brutalismbot/mail
+    tags: true
