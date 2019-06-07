@@ -51,8 +51,26 @@ data aws_iam_policy_document mail {
   }
 }
 
+data aws_iam_policy_document send_ses {
+  statement {
+    actions   = ["ses:SendRawEmail"]
+    resources = ["*"]
+  }
+}
+
 data aws_route53_zone website {
   name = "${var.domain_name}."
+}
+
+resource aws_iam_user help {
+  name = "help"
+  tags = local.tags
+}
+
+resource aws_iam_user_policy send_ses {
+  name   = "AmazonSesSendingAccess"
+  user   = aws_iam_user.help.name
+  policy = data.aws_iam_policy_document.send_ses.json
 }
 
 resource aws_route53_record mx {
