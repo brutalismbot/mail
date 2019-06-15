@@ -113,6 +113,14 @@ resource aws_s3_bucket mail {
   tags   = local.tags
 }
 
+resource aws_s3_bucket_public_access_block mail {
+  bucket                  = aws_s3_bucket.mail.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource aws_ses_domain_dkim dkim {
   domain = aws_ses_domain_identity.brutalismbot.domain
 }
