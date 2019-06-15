@@ -29,7 +29,7 @@ locals {
 data aws_caller_identity current {
 }
 
-data aws_iam_policy_document mail {
+data aws_iam_policy_document s3 {
   statement {
     sid       = "AllowSES"
     actions   = ["s3:PutObject"]
@@ -51,26 +51,84 @@ data aws_iam_policy_document mail {
   }
 }
 
-data aws_iam_policy_document send_ses {
+data aws_iam_policy_document mail {
   statement {
+    sid     = "AllowS3"
+    actions = ["s3:*"]
+    resources = [
+      "arn:aws:s3:::mail.${var.domain_name}",
+      "arn:aws:s3:::mail.${var.domain_name}/*",
+    ]
+  }
+
+  statement {
+    sid       = "AllowSES"
     actions   = ["ses:SendRawEmail"]
     resources = ["*"]
   }
+}
+
+data aws_iam_policy_document smtp {
+  statement {
+    sid       = "AllowSES"
+    actions   = ["ses:SendRawEmail"]
+    resources = ["*"]
+  }
+}
+
+data aws_iam_role role {
+  name = "brutalismbot"
 }
 
 data aws_route53_zone website {
   name = "${var.domain_name}."
 }
 
-resource aws_iam_user help {
-  name = "help"
+resource aws_cloudwatch_log_group mail {
+  name              = "/aws/lambda/${aws_lambda_function.mail.function_name}"
+  retention_in_days = 30
+  tags              = local.tags
+}
+
+resource aws_iam_user smtp {
+  name = "smtp"
   tags = local.tags
 }
 
-resource aws_iam_user_policy send_ses {
+resource aws_iam_user_policy smtp {
   name   = "AmazonSesSendingAccess"
-  user   = aws_iam_user.help.name
-  policy = data.aws_iam_policy_document.send_ses.json
+  user   = aws_iam_user.smtp.name
+  policy = data.aws_iam_policy_document.smtp.json
+}
+
+resource aws_iam_role_policy mail {
+  name   = "mail"
+  role   = data.aws_iam_role.role.id
+  policy = data.aws_iam_policy_document.mail.json
+}
+
+resource aws_lambda_function mail {
+  description      = "Forward incoming messages to @brutalismbot.com"
+  filename         = "lambda.zip"
+  function_name    = "brutalismbot-mail"
+  handler          = "lambda.handler"
+  role             = data.aws_iam_role.role.arn
+  runtime          = "ruby2.5"
+  source_code_hash = filebase64sha256("lambda.zip")
+  tags             = local.tags
+
+  environment {
+    variables = {
+      DESTINATIONS = "smallweirdnum@gmail.com"
+    }
+  }
+}
+
+resource aws_lambda_permission mail {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.mail.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.mail.arn
 }
 
 resource aws_route53_record mx {
@@ -109,7 +167,7 @@ resource aws_route53_record cname {
 resource aws_s3_bucket mail {
   acl    = "private"
   bucket = "mail.${var.domain_name}"
-  policy = data.aws_iam_policy_document.mail.json
+  policy = data.aws_iam_policy_document.s3.json
   tags   = local.tags
 }
 
@@ -156,6 +214,12 @@ resource aws_ses_receipt_rule_set default {
 
 resource aws_sns_topic mail {
   name = "brutalismbot_mail"
+}
+
+resource aws_sns_topic_subscription mail {
+  endpoint  = aws_lambda_function.mail.arn
+  protocol  = "lambda"
+  topic_arn = aws_sns_topic.mail.arn
 }
 
 variable domain_name {

@@ -2,7 +2,7 @@ language: ruby
 rvm:
 - 2.5.5
 script:
-- make
+- make plan
 deploy:
 - provider: script
   script: make apply
