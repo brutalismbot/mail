@@ -17,6 +17,7 @@ all: Gemfile.lock lambda.zip
 	--build-arg AWS_DEFAULT_REGION \
 	--build-arg AWS_SECRET_ACCESS_KEY \
 	--build-arg RUNTIME=$(runtime) \
+	--build-arg TF_VAR_destinations \
 	--build-arg TF_VAR_release=$(build) \
 	--iidfile $@ \
 	--tag brutalismbot/$(name):$(build)-$* \

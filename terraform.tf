@@ -116,10 +116,11 @@ resource aws_lambda_function mail {
   runtime          = "ruby2.5"
   source_code_hash = filebase64sha256("lambda.zip")
   tags             = local.tags
+  timeout          = 15
 
   environment {
     variables = {
-      DESTINATIONS = "smallweirdnum@gmail.com"
+      DESTINATIONS = var.destinations
     }
   }
 }
@@ -220,6 +221,10 @@ resource aws_sns_topic_subscription mail {
   endpoint  = aws_lambda_function.mail.arn
   protocol  = "lambda"
   topic_arn = aws_sns_topic.mail.arn
+}
+
+variable destinations {
+  description = "Destination email list"
 }
 
 variable domain_name {
