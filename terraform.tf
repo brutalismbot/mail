@@ -214,7 +214,7 @@ resource aws_ses_receipt_rule_set default {
 }
 
 resource aws_sns_topic mail {
-  name = "brutalismbot_mail"
+  name = "brutalismbot-mail"
 }
 
 resource aws_sns_topic_subscription mail {
