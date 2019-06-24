@@ -1,17 +1,19 @@
 ARG RUNTIME=ruby2.5
 
 FROM lambci/lambda:build-${RUNTIME} AS build
-COPY Gemfile* lambda.rb /var/task/
+COPY . .
 ARG BUNDLE_SILENCE_ROOT_WARNING=1
 RUN bundle install --path vendor/bundle/ --without development
 RUN zip -r lambda.zip Gemfile* lambda.rb vendor
 
-FROM build AS test
+FROM lambci/lambda:build-${RUNTIME} AS test
 COPY --from=hashicorp/terraform:0.12.2 /bin/terraform /bin/
+COPY --from=build /var/task/ .
 RUN terraform fmt -check
 
-FROM test AS plan
-COPY terraform.tf .
+FROM lambci/lambda:build-${RUNTIME} AS plan
+COPY --from=test /bin/terraform /bin/
+COPY --from=test /var/task/ .
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_DEFAULT_REGION=us-east-1
 ARG AWS_SECRET_ACCESS_KEY
