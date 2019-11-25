@@ -1,11 +1,17 @@
 language: ruby
 rvm:
-- 2.5.5
+- 2.5.7
+before_install:
+- docker pull lambci/lambda:build-ruby2.5
+- docker pull hashicorp/terraform:latest
+- gem install bundler -v 2.0.2
+install:
+- bundle install --deployment
 script:
-- make plan
+- bundle exec rum plan
 deploy:
 - provider: script
-  script: make apply
+  script: rvm use $(< .ruby-version) bundle exec rum apply
   on:
     repo: brutalismbot/mail
     tags: true

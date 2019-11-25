@@ -4,25 +4,23 @@ terraform {
     key    = "terraform/mail.tfstate"
     region = "us-east-1"
   }
-
-  required_version = ">= 0.12.0"
-
-  required_providers {
-    aws = ">= 2.7.0"
-  }
 }
 
 provider aws {
   region  = "us-east-1"
-  version = "~> 2.7"
+  version = "~> 2.11"
 }
 
 locals {
+  domain  = "brutalismbot.com"
+  repo    = "https://github.com/brutalismbot/mail"
+  release = var.release
+
   tags = {
     App     = "mail"
-    Name    = var.domain_name
-    Repo    = var.repo
-    Release = var.release
+    Name    = local.domain
+    Repo    = local.repo
+    Release = local.release
   }
 }
 
@@ -33,7 +31,7 @@ data aws_iam_policy_document s3 {
   statement {
     sid       = "AllowSES"
     actions   = ["s3:PutObject"]
-    resources = ["arn:aws:s3:::mail.${var.domain_name}/*"]
+    resources = ["arn:aws:s3:::mail.${local.domain}/*"]
 
     condition {
       test     = "StringLike"
@@ -56,8 +54,8 @@ data aws_iam_policy_document mail {
     sid     = "AllowS3"
     actions = ["s3:*"]
     resources = [
-      "arn:aws:s3:::mail.${var.domain_name}",
-      "arn:aws:s3:::mail.${var.domain_name}/*",
+      "arn:aws:s3:::mail.${local.domain}",
+      "arn:aws:s3:::mail.${local.domain}/*",
     ]
   }
 
@@ -81,7 +79,7 @@ data aws_iam_role role {
 }
 
 data aws_route53_zone website {
-  name = "${var.domain_name}."
+  name = "${local.domain}."
 }
 
 resource aws_cloudwatch_log_group mail {
@@ -134,7 +132,7 @@ resource aws_lambda_permission mail {
 
 resource aws_route53_record mx {
   zone_id = data.aws_route53_zone.website.id
-  name    = "mail.${var.domain_name}"
+  name    = "mail.${local.domain}"
   type    = "MX"
   ttl     = 300
   records = ["10 feedback-smtp.us-east-1.amazonses.com"]
@@ -142,7 +140,7 @@ resource aws_route53_record mx {
 
 resource aws_route53_record spf {
   zone_id = data.aws_route53_zone.website.id
-  name    = "mail.${var.domain_name}"
+  name    = "mail.${local.domain}"
   type    = "TXT"
   ttl     = 300
   records = ["v=spf1 include:amazonses.com ~all"]
@@ -150,7 +148,7 @@ resource aws_route53_record spf {
 
 resource aws_route53_record txt {
   zone_id = data.aws_route53_zone.website.id
-  name    = "_amazonses.${var.domain_name}"
+  name    = "_amazonses.${local.domain}"
   type    = "TXT"
   ttl     = 1800
   records = [aws_ses_domain_identity.brutalismbot.verification_token]
@@ -159,7 +157,7 @@ resource aws_route53_record txt {
 resource aws_route53_record cname {
   count   = 3
   zone_id = data.aws_route53_zone.website.id
-  name    = "${element(aws_ses_domain_dkim.dkim.dkim_tokens, count.index)}._domainkey.${var.domain_name}"
+  name    = "${element(aws_ses_domain_dkim.dkim.dkim_tokens, count.index)}._domainkey.${local.domain}"
   type    = "CNAME"
   ttl     = 1800
   records = ["${element(aws_ses_domain_dkim.dkim.dkim_tokens, count.index)}.dkim.amazonses.com"]
@@ -167,7 +165,7 @@ resource aws_route53_record cname {
 
 resource aws_s3_bucket mail {
   acl    = "private"
-  bucket = "mail.${var.domain_name}"
+  bucket = "mail.${local.domain}"
   policy = data.aws_iam_policy_document.s3.json
   tags   = local.tags
 }
@@ -185,7 +183,7 @@ resource aws_ses_domain_dkim dkim {
 }
 
 resource aws_ses_domain_identity brutalismbot {
-  domain = var.domain_name
+  domain = local.domain
 }
 
 resource aws_ses_domain_mail_from mail_from {
@@ -197,13 +195,13 @@ resource aws_ses_domain_mail_from mail_from {
 resource aws_ses_receipt_rule help {
   name          = "help"
   rule_set_name = aws_ses_receipt_rule_set.default.rule_set_name
-  recipients    = ["help@${var.domain_name}"]
+  recipients    = ["help@${local.domain}"]
   enabled       = true
   scan_enabled  = true
 
   s3_action {
     bucket_name       = aws_s3_bucket.mail.bucket
-    object_key_prefix = "help@${var.domain_name}/"
+    object_key_prefix = "help@${local.domain}/"
     position          = 1
     topic_arn         = aws_sns_topic.mail.arn
   }
@@ -227,16 +225,6 @@ variable destinations {
   description = "Destination email list"
 }
 
-variable domain_name {
-  description = "Website domain name."
-  default     = "brutalismbot.com"
-}
-
 variable release {
   description = "Release tag."
-}
-
-variable repo {
-  description = "Project repository."
-  default     = "https://github.com/brutalismbot/mail"
 }

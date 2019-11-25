@@ -2,26 +2,20 @@ require "aws-sdk-s3"
 require "aws-sdk-ses"
 require "mail"
 
-DESTINATIONS = ENV["DESTINATIONS"].split /,/
+DESTINATIONS = ENV["DESTINATIONS"].to_s.split(/,/)
 
 S3  = Aws::S3::Client.new
 SES = Aws::SES::Client.new
 
-module Event
-  class SNS < Hash
-    include Enumerable
-
-    def each
-      puts "EVENT #{to_json}"
-      dig("Records").each do |record|
-        yield JSON.parse record.dig("Sns", "Message")
-      end
-    end
+def each_message(event)
+  puts "EVENT #{event.to_json}"
+  event.fetch("Records", []).each do |record|
+    yield JSON.parse record.dig "Sns", "Message"
   end
 end
 
 def handler(event:, context:)
-  Event::SNS[event].map do |message|
+  each_message event do |message|
     # Get message from S3
     bucket = message.dig "receipt", "action", "bucketName"
     key    = message.dig "receipt", "action", "objectKey"
@@ -32,7 +26,7 @@ def handler(event:, context:)
     mail             = Mail.read_from_string data
     mail.to          = DESTINATIONS
     mail.reply_to    = mail[:from].value
-    mail.from        = mail[:from].value.sub /<.*?@.*?>/, "<no-reply@brutalismbot.com>"
+    mail.from        = mail[:from].value.sub(/<.*?@.*?>/, "<no-reply@brutalismbot.com>")
     mail.return_path = "<no-reply@brutalismbot.com>"
 
     # Forward message to `DESTINATIONS`
