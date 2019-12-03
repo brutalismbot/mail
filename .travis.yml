@@ -9,9 +9,3 @@ install:
 - bundle install --deployment
 script:
 - bundle exec rum plan
-deploy:
-- provider: script
-  script: rvm use $(< .ruby-version) bundle exec rum apply
-  on:
-    repo: brutalismbot/mail
-    tags: true
