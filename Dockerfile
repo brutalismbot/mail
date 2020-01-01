@@ -2,13 +2,17 @@ ARG RUNTIME=ruby2.5
 ARG TERRAFORM=latest
 
 FROM lambci/lambda:build-${RUNTIME} AS build
-COPY . .
-ARG BUNDLE_SILENCE_ROOT_WARNING=1
-RUN bundle install --path vendor/bundle/ --without development
-RUN zip -r lambda.zip Gemfile* lambda.rb vendor
+COPY Gemfile* /var/task/
+RUN bundle config --local path vendor/bundle/
+RUN bundle config --local silence_root_warning 1
+RUN bundle config --local without development
+RUN bundle
+COPY lambda.rb .
+RUN zip -r lambda.zip *
 
 FROM hashicorp/terraform:${TERRAFORM} AS plan
 WORKDIR /var/task/
+COPY . .
 COPY --from=build /var/task/ .
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_DEFAULT_REGION=us-east-1

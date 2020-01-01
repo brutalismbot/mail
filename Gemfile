@@ -7,5 +7,5 @@ group :development do
   gem "aws-sdk-ses", "~> 1"
   gem "dotenv",      "~> 2.7"
   gem "pry",         "~> 0.12"
-  gem "rumrunner",   "~> 0.4"
+  gem "rumrunner",   "~> 0.5"
 end
