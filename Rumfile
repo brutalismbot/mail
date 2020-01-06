@@ -19,5 +19,5 @@ rum :"brutalismbot/mail" do
   desc "Apply infrastructure"
   run :apply => :plan
 
-  default ["lambda.zip", :plan]
+  default %w[lambda.zip plan]
 end
