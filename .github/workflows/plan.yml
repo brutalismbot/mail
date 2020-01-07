@@ -1,32 +1,27 @@
 name: plan
 on:
+  pull_request:
   push:
     branches:
     - master
-  pull_request:
-
+  schedule:
+  - cron: "11 21 * * *"
 jobs:
   plan:
     runs-on: ubuntu-latest
     steps:
-
     - uses: actions/checkout@v1
-
     - uses: actions/setup-ruby@v1
-      with:
-        ruby-version: 2.5
-
-    - name: setup
+    - name: Set up plan
       run: |
         gem install bundler -v 2.1.2
         bundle install --jobs 4 --retry 3
         docker pull hashicorp/terraform:latest
         docker pull lambci/lambda:build-ruby2.5
-
-    - name: plan
+    - name: Run plan
+      run: |
+        bundle exec rum plan
       env:
         AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_DEFAULT_REGION:    ${{ secrets.AWS_DEFAULT_REGION }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      run: |
-        bundle exec rum plan
