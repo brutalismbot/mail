@@ -1,7 +1,7 @@
-ARG RUNTIME=ruby2.5
+ARG RUBY=2.7
 ARG TERRAFORM=latest
 
-FROM lambci/lambda:build-${RUNTIME} AS build
+FROM lambci/lambda:build-ruby${RUBY} AS build
 COPY Gemfile* /var/task/
 RUN bundle config --local path vendor/bundle/
 RUN bundle config --local silence_root_warning 1
