@@ -1,6 +1,8 @@
 <img alt="brutalismbot" src="https://brutalismbot.com/banner.png"/>
 
 [![plan](https://github.com/brutalismbot/mail/workflows/plan/badge.svg)](https://github.com/brutalismbot/mail/actions)
+[![plan](https://img.shields.io/github/workflow/status/brutalismbot/mail/plan?logo=github&style=flat-square)](https://github.com/brutalismbot/mail/actions)
+
 
 Email over SES for [brutalismbot.com](https://brutalismbot.com)
 
