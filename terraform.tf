@@ -12,15 +12,13 @@ provider aws {
 }
 
 locals {
-  domain  = "brutalismbot.com"
-  repo    = "https://github.com/brutalismbot/mail"
-  release = var.release
+  domain = "brutalismbot.com"
+  repo   = "https://github.com/brutalismbot/mail"
 
   tags = {
-    App     = "mail"
-    Name    = local.domain
-    Repo    = local.repo
-    Release = local.release
+    App  = "mail"
+    Name = local.domain
+    Repo = local.repo
   }
 }
 
@@ -107,18 +105,18 @@ resource aws_iam_role_policy mail {
 
 resource aws_lambda_function mail {
   description      = "Forward incoming messages to @brutalismbot.com"
-  filename         = "lambda.zip"
+  filename         = "package.zip"
   function_name    = "brutalismbot-mail"
   handler          = "lambda.handler"
   role             = data.aws_iam_role.role.arn
   runtime          = "ruby2.7"
-  source_code_hash = filebase64sha256("lambda.zip")
+  source_code_hash = filebase64sha256("package.zip")
   tags             = local.tags
   timeout          = 15
 
   environment {
     variables = {
-      DESTINATIONS = var.destinations
+      DESTINATIONS = var.DESTINATIONS
     }
   }
 }
@@ -221,10 +219,6 @@ resource aws_sns_topic_subscription mail {
   topic_arn = aws_sns_topic.mail.arn
 }
 
-variable destinations {
+variable DESTINATIONS {
   description = "Destination email list"
-}
-
-variable release {
-  description = "Release tag."
 }
