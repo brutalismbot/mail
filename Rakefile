@@ -1,6 +1,6 @@
 require "rake/clean"
-CLOBBER.include ".terraform"
-CLEAN.include "terraform.zip", "package.iid", "package.zip"
+CLOBBER.include ".terraform", "package.iid"
+CLEAN.include "terraform.zip", "package.zip"
 task :default => %i[terraform:plan]
 
 REPO    = "brutalismbot/mail"
@@ -20,13 +20,15 @@ namespace :docker do
   end
 end
 
+task :clean => %i[docker:clean]
+
 namespace :package do
   directory "vendor" => %[package.iid] do
     sh "docker run --rm --entrypoint tar $(cat package.iid) -c #{f.name} | tar -x"
   end
 
-  file "package.zip" => %i[vendor] do |f|
-    sh "zip -9r #{f.name} Gemfile* lambda.rb vendor"
+  file "package.zip" => %i[vendor Gemfile Gemfile.lock lambda.rb] do |f|
+    sh "zip -9r #{f.name} #{f.prereqs.join " "}"
   end
 
   desc "Build Lambda package"
