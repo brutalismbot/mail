@@ -23,11 +23,8 @@ end
 task :clean => %i[docker:clean]
 
 namespace :package do
-  directory "vendor" => %[package.iid] do
-    sh "docker run --rm --entrypoint tar $(cat package.iid) -c #{f.name} | tar -x"
-  end
-
-  file "package.zip" => %i[vendor Gemfile Gemfile.lock lambda.rb] do |f|
+  file "package.zip" => %i[vendor package.iid Gemfile Gemfile.lock lambda.rb] do |f|
+    sh "docker run --rm --entrypoint tar $(cat package.iid) -c vendor | tar -x"
     sh "zip -9r #{f.name} #{f.prereqs.join " "}"
   end
 
