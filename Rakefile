@@ -1,7 +1,7 @@
 require "rake/clean"
 CLOBBER.include ".terraform", "package.iid"
 CLEAN.include "terraform.zip", "package.zip"
-task :default => %i[terraform:plan]
+task :default => %i[package.zip]
 
 REPO    = "brutalismbot/mail"
 RUNTIME = "ruby2.7"

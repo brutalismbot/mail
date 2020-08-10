@@ -31,6 +31,11 @@ def handler(event:, context:nil)
     mail.return_path = "<no-reply@brutalismbot.com>"
 
     # Forward message to `DESTINATIONS`
-    SES.send_email(content: {raw: {data: mail.to_s}})
+    SES.send_email(
+      content:            {raw: {data: mail.to_s}},
+      destination:        {to_addresses: mail.to},
+      from_email_address: mail.from.first,
+      reply_to_addresses: mail.reply_to
+    )
   end
 end
