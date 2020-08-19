@@ -8,7 +8,7 @@ terraform {
 
 provider aws {
   region  = "us-east-1"
-  version = "~> 2.11"
+  version = "~> 3.2"
 }
 
 locals {
