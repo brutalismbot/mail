@@ -17,3 +17,5 @@ jobs:
           secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-arn:          ${{ secrets.AWS_ROLE_ARN }}
       - run: rake terraform:plan
+        env:
+          TF_VAR_DESTINATIONS: ${{ secrets.TF_VAR_DESTINATIONS }}
