@@ -1,7 +1,7 @@
 terraform {
-  required_version = "~> 0.13"
+  required_version = "~> 0.14"
 
-  backend s3 {
+  backend "s3" {
     bucket = "brutalismbot"
     key    = "terraform/mail.tfstate"
     region = "us-east-1"
@@ -15,9 +15,8 @@ terraform {
   }
 }
 
-provider aws {
-  region  = "us-east-1"
-  version = "~> 3.2"
+provider "aws" {
+  region = "us-east-1"
 }
 
 locals {
@@ -31,10 +30,10 @@ locals {
   }
 }
 
-data aws_caller_identity current {
+data "aws_caller_identity" "current" {
 }
 
-data aws_iam_policy_document s3 {
+data "aws_iam_policy_document" "s3" {
   statement {
     sid       = "AllowSES"
     actions   = ["s3:PutObject"]
@@ -56,7 +55,7 @@ data aws_iam_policy_document s3 {
   }
 }
 
-data aws_iam_policy_document mail {
+data "aws_iam_policy_document" "mail" {
   statement {
     sid     = "AllowS3"
     actions = ["s3:*"]
@@ -73,7 +72,7 @@ data aws_iam_policy_document mail {
   }
 }
 
-data aws_iam_policy_document smtp {
+data "aws_iam_policy_document" "smtp" {
   statement {
     sid       = "AllowSES"
     actions   = ["ses:SendRawEmail"]
@@ -81,38 +80,38 @@ data aws_iam_policy_document smtp {
   }
 }
 
-data aws_iam_role role {
+data "aws_iam_role" "role" {
   name = "brutalismbot"
 }
 
-data aws_route53_zone website {
+data "aws_route53_zone" "website" {
   name = "${local.domain}."
 }
 
-resource aws_cloudwatch_log_group mail {
+resource "aws_cloudwatch_log_group" "mail" {
   name              = "/aws/lambda/${aws_lambda_function.mail.function_name}"
   retention_in_days = 30
   tags              = local.tags
 }
 
-resource aws_iam_user smtp {
+resource "aws_iam_user" "smtp" {
   name = "smtp"
   tags = local.tags
 }
 
-resource aws_iam_user_policy smtp {
+resource "aws_iam_user_policy" "smtp" {
   name   = "AmazonSesSendingAccess"
   user   = aws_iam_user.smtp.name
   policy = data.aws_iam_policy_document.smtp.json
 }
 
-resource aws_iam_role_policy mail {
+resource "aws_iam_role_policy" "mail" {
   name   = "mail"
   role   = data.aws_iam_role.role.id
   policy = data.aws_iam_policy_document.mail.json
 }
 
-resource aws_lambda_function mail {
+resource "aws_lambda_function" "mail" {
   description      = "Forward incoming messages to @brutalismbot.com"
   filename         = "package.zip"
   function_name    = "brutalismbot-mail"
@@ -130,14 +129,14 @@ resource aws_lambda_function mail {
   }
 }
 
-resource aws_lambda_permission mail {
+resource "aws_lambda_permission" "mail" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.mail.function_name
   principal     = "sns.amazonaws.com"
   source_arn    = aws_sns_topic.mail.arn
 }
 
-resource aws_route53_record mx {
+resource "aws_route53_record" "mx" {
   zone_id = data.aws_route53_zone.website.id
   name    = "mail.${local.domain}"
   type    = "MX"
@@ -145,7 +144,7 @@ resource aws_route53_record mx {
   records = ["10 feedback-smtp.us-east-1.amazonses.com"]
 }
 
-resource aws_route53_record spf {
+resource "aws_route53_record" "spf" {
   zone_id = data.aws_route53_zone.website.id
   name    = "mail.${local.domain}"
   type    = "TXT"
@@ -153,7 +152,7 @@ resource aws_route53_record spf {
   records = ["v=spf1 include:amazonses.com ~all"]
 }
 
-resource aws_route53_record txt {
+resource "aws_route53_record" "txt" {
   zone_id = data.aws_route53_zone.website.id
   name    = "_amazonses.${local.domain}"
   type    = "TXT"
@@ -161,7 +160,7 @@ resource aws_route53_record txt {
   records = [aws_ses_domain_identity.brutalismbot.verification_token]
 }
 
-resource aws_route53_record cname {
+resource "aws_route53_record" "cname" {
   count   = 3
   zone_id = data.aws_route53_zone.website.id
   name    = "${element(aws_ses_domain_dkim.dkim.dkim_tokens, count.index)}._domainkey.${local.domain}"
@@ -170,14 +169,14 @@ resource aws_route53_record cname {
   records = ["${element(aws_ses_domain_dkim.dkim.dkim_tokens, count.index)}.dkim.amazonses.com"]
 }
 
-resource aws_s3_bucket mail {
+resource "aws_s3_bucket" "mail" {
   acl    = "private"
   bucket = "mail.${local.domain}"
   policy = data.aws_iam_policy_document.s3.json
   tags   = local.tags
 }
 
-resource aws_s3_bucket_public_access_block mail {
+resource "aws_s3_bucket_public_access_block" "mail" {
   bucket                  = aws_s3_bucket.mail.id
   block_public_acls       = true
   block_public_policy     = true
@@ -185,21 +184,21 @@ resource aws_s3_bucket_public_access_block mail {
   restrict_public_buckets = true
 }
 
-resource aws_ses_domain_dkim dkim {
+resource "aws_ses_domain_dkim" "dkim" {
   domain = aws_ses_domain_identity.brutalismbot.domain
 }
 
-resource aws_ses_domain_identity brutalismbot {
+resource "aws_ses_domain_identity" "brutalismbot" {
   domain = local.domain
 }
 
-resource aws_ses_domain_mail_from mail_from {
+resource "aws_ses_domain_mail_from" "mail_from" {
   behavior_on_mx_failure = "RejectMessage"
   domain                 = aws_ses_domain_identity.brutalismbot.domain
   mail_from_domain       = "mail.${aws_ses_domain_identity.brutalismbot.domain}"
 }
 
-resource aws_ses_receipt_rule help {
+resource "aws_ses_receipt_rule" "help" {
   name          = "help"
   rule_set_name = aws_ses_receipt_rule_set.default.rule_set_name
   recipients    = ["help@${local.domain}"]
@@ -214,20 +213,20 @@ resource aws_ses_receipt_rule help {
   }
 }
 
-resource aws_ses_receipt_rule_set default {
+resource "aws_ses_receipt_rule_set" "default" {
   rule_set_name = "default-rule-set"
 }
 
-resource aws_sns_topic mail {
+resource "aws_sns_topic" "mail" {
   name = "brutalismbot-mail"
 }
 
-resource aws_sns_topic_subscription mail {
+resource "aws_sns_topic_subscription" "mail" {
   endpoint  = aws_lambda_function.mail.arn
   protocol  = "lambda"
   topic_arn = aws_sns_topic.mail.arn
 }
 
-variable DESTINATIONS {
+variable "DESTINATIONS" {
   description = "Destination email list"
 }
