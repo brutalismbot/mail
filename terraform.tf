@@ -115,7 +115,7 @@ resource "aws_lambda_function" "mail" {
   description      = "Forward incoming messages to @brutalismbot.com"
   filename         = "package.zip"
   function_name    = "brutalismbot-mail"
-  handler          = "lambda.handler"
+  handler          = "index.handler"
   role             = data.aws_iam_role.role.arn
   runtime          = "ruby2.7"
   source_code_hash = filebase64sha256("package.zip")

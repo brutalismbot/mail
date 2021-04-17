@@ -1,55 +1,57 @@
+require "dotenv/load"
 require "rake/clean"
-CLOBBER.include ".terraform", "package.iid"
-CLEAN.include "terraform.zip", "package.zip"
-task :default => %i[package.zip]
-
-REPO    = "brutalismbot/mail"
-RUNTIME = "ruby2.7"
+CLEAN.include ".terraform", "package.zip"
+task :default => %i[terraform:plan]
+task :clean   => %i[docker:clean]
 
 namespace :docker do
-  file "package.iid" => %i[Gemfile Gemfile.lock lambda.rb] do |f|
-    sh "docker build --build-arg RUNTIME=#{RUNTIME} --iidfile #{f.name} --tag #{REPO} ."
+  @repo = "brutalismbot/mail"
+
+  desc "Export lib"
+  task :export => :build do
+    sh %{docker run --rm --entrypoint tar #{ @repo } cf - . | (cd lib && tar xf - )}
   end
 
-  desc "Build Docker image for package"
-  task :build => %i[package.iid]
+  desc "Build Docker image"
+  task :build do
+    sh %{docker build --tag #{ @repo } .}
+  end
 
   desc "Remove Docker image"
   task :clean do
-    sh "docker image ls --quiet #{REPO} | uniq | xargs docker image rm --force"
+    sh "docker image ls --quiet #{ @repo } | uniq | xargs docker image rm --force"
   end
 end
 
-task :clean => %i[docker:clean]
-
 namespace :package do
-  file "package.zip" => %i[vendor package.iid Gemfile Gemfile.lock lambda.rb] do |f|
-    sh "docker run --rm --entrypoint tar $(cat package.iid) -c vendor | tar -x"
-    sh "zip -9r #{f.name} #{f.prereqs.join " "}"
+  @files = Dir["lib/*"] - Dir["lib/*.zip"]
+
+  file "package.zip" => @files do |f|
+    sh %{cd lib && zip -9r ../package.zip .}
   end
 
   desc "Build Lambda package"
-  task :build => %i[package.zip]
+  task :zip => %i[package.zip]
 end
 
 namespace :terraform do
+  %i[plan apply].each do |cmd|
+    desc "Run terraform #{ cmd }"
+    task cmd => %i[init package:zip] do
+      sh %{terraform #{ cmd }}
+    end
+  end
+
+  namespace :apply do
+    desc "Run terraform auto -auto-approve"
+    task :auto => %i[init package:zip] do
+      sh %{terraform apply -auto-approve}
+    end
+  end
+
+  task :init => ".terraform"
+
   directory ".terraform" do
-    sh "terraform init"
+    sh %{terraform init}
   end
-
-  desc "Run terraform init"
-  task :init => %i[.terraform]
-
-  file "terraform.zip" => %i[package.zip terraform.tf], order_only: %i[.terraform] do
-    sh "terraform plan -out terraform.zip"
-  end
-
-  desc "Run terraform apply"
-  task :apply => %i[terraform.zip] do
-    sh "terraform apply terraform.zip"
-    rm "terraform.zip"
-  end
-
-  desc "Run terraform plan"
-  task :plan => %i[terraform.zip]
 end

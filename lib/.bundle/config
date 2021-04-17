@@ -1,0 +1,4 @@
+---
+BUNDLE_PATH: "vendor/bundle"
+BUNDLE_SILENCE_ROOT_WARNING: "1"
+BUNDLE_WITHOUT: "development"
