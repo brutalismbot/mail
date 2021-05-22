@@ -10,13 +10,15 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = "~> 3.38"
     }
   }
 }
 
 provider "aws" {
   region = "us-east-1"
+
+  default_tags { tags = local.tags }
 }
 
 locals {
@@ -91,12 +93,10 @@ data "aws_route53_zone" "website" {
 resource "aws_cloudwatch_log_group" "mail" {
   name              = "/aws/lambda/${aws_lambda_function.mail.function_name}"
   retention_in_days = 30
-  tags              = local.tags
 }
 
 resource "aws_iam_user" "smtp" {
   name = "smtp"
-  tags = local.tags
 }
 
 resource "aws_iam_user_policy" "smtp" {
@@ -119,7 +119,6 @@ resource "aws_lambda_function" "mail" {
   role             = data.aws_iam_role.role.arn
   runtime          = "ruby2.7"
   source_code_hash = filebase64sha256("package.zip")
-  tags             = local.tags
   timeout          = 15
 
   environment {
@@ -173,7 +172,6 @@ resource "aws_s3_bucket" "mail" {
   acl    = "private"
   bucket = "mail.${local.domain}"
   policy = data.aws_iam_policy_document.s3.json
-  tags   = local.tags
 }
 
 resource "aws_s3_bucket_public_access_block" "mail" {
